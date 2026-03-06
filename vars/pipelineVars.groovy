@@ -32,7 +32,9 @@ class pipelineVars implements Serializable {
     String iqeCoreImage = 'quay.io/cloudservices/iqe-core:latest'
     String iqeTestsImage = 'quay.io/cloudservices/iqe-tests:latest'
     String seleniumImage = 'quay.io/app-sre/selenium-standalone-chrome:136.0-20250828'
-    String playwrightImage = 'quay.io/insights-qe/playwright-vnc:ubi9-chrome-1.58.2'
+    String playwrightImageRepo = 'quay.io/insights-qe/playwright-vnc'
+    String defaultPlaywrightBrowser = 'chrome'
+    String defaultPlaywrightVersion = '1.58.2'
 
     String defaultSeleniumBrowser = "chrome"
 

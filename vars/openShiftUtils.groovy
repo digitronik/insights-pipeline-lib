@@ -234,7 +234,12 @@ def withPlaywrightNode(Map parameters = [:], Closure body) {
     def cloud = parameters.get('cloud', pipelineVars.upshiftCloud)
     def namespace = parameters.get('namespace', pipelineVars.upshiftNameSpace)
     def slaveImage = parameters.get('slaveImage', pipelineVars.centralCIjenkinsSlaveImage)
-    def playwrightImage = parameters.get('playwrightImage', pipelineVars.playwrightImage)
+    def playwrightBrowser = parameters.get('playwrightBrowser', pipelineVars.defaultPlaywrightBrowser)
+    def playwrightVersion = parameters.get('playwrightVersion', pipelineVars.defaultPlaywrightVersion)
+    def playwrightImage = parameters.get(
+        'playwrightImage',
+        "${pipelineVars.playwrightImageRepo}:ubi9-${playwrightBrowser}-${playwrightVersion}"
+    )
     def image = parameters.get('image', pipelineVars.iqeCoreImage)
     def requestCpu = parameters.get('resourceRequestCpu', "500m")
     def limitCpu = parameters.get('resourceLimitCpu', "500m")
@@ -284,7 +289,7 @@ def withPlaywrightNode(Map parameters = [:], Closure body) {
                 resourceRequestMemory: playwrightRequestMemory,
                 resourceLimitMemory: playwrightLimitMemory,
                 envVars: [
-                    envVar(key: 'PW_BROWSER', value: "chrome"),
+                    envVar(key: 'PW_BROWSER', value: playwrightBrowser),
                     envVar(key: 'PW_HEADLESS', value: "false"),
                 ],
             ),

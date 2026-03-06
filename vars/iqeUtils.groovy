@@ -91,6 +91,12 @@ private def parseOptions(Map options) {
     // when true, a playwright sidecar is provisioned instead of a selenium sidecar
     options['playwright'] = options.get('playwright', false)
 
+    // playwright browser type (firefox, chromium)
+    options['playwrightBrowser'] = options.get('playwrightBrowser', pipelineVars.defaultPlaywrightBrowser)
+
+    // playwright version for the sidecar image tag
+    options['playwrightVersion'] = options.get('playwrightVersion', pipelineVars.defaultPlaywrightVersion)
+
     // enable pytest-xdist plugin for multiprocess parallelism
     options['xdistEnabled'] = options.get('xdistEnabled', false)
 
