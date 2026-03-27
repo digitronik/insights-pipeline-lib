@@ -2,7 +2,7 @@
 
 def slackMessage
 
-def prepareRapidastStages(String ServiceName, String PluginName, String ApiScanner, String TargetUrl, String ApISpecUrl, String Jira, String Cloud=pipelineVars.upshiftCloud, String Namespace=pipelineVars.upshiftNameSpace) {
+def prepareRapidastStages(String ServiceName, String PluginName, String ApiScanner, String TargetUrl, String ApISpecUrl, String Jira, String Cloud=pipelineVars.upshiftCloud, String Namespace=pipelineVars.upshiftNameSpace, String VaultSecretPath = 'insights/secrets/qe/stage/swatch/rapidast_user') {
     openShiftUtils.withNode(cloud: Cloud, namespace: Namespace, image: 'quay.io/redhatproductsecurity/rapidast:2.12.1', resourceRequestMemory: '1Gi', resourceLimitMemory: '4Gi') {
 
         stage("Set Build Rapidast for ${ServiceName} service") {
@@ -16,8 +16,9 @@ def prepareRapidastStages(String ServiceName, String PluginName, String ApiScann
         stage("Run Rapidast for ${ServiceName} service") {
             catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                 def secrets = [
-                    [path: 'insights/secrets/qe/stage/swatch/rapidast_user', engineVersion: 2, secretValues: [
-                    [envVar: 'RTOKEN', vaultKey: 'RTOKEN']]],
+                    [path: VaultSecretPath, engineVersion: 2, secretValues: [
+                        [envVar: 'RTOKEN', vaultKey: 'RTOKEN']
+                    ]],
                 ]
                 def configuration = [vaultUrl: 'https://vault.devshift.net/',
                                          vaultCredentialId: 'vault-approle-cred',
