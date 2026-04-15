@@ -2,6 +2,8 @@
 
 def slackMessage
 
+def jiraAtlassianApiAccountEmail = 'insights-qe-jira-bot@redhat.com'
+
 def prepareRapidastStages(String ServiceName, String PluginName, String ApiScanner, String TargetUrl, String ApISpecUrl, String Jira, String Cloud=pipelineVars.upshiftCloud, String Namespace=pipelineVars.upshiftNameSpace, String VaultSecretPath = 'insights/secrets/qe/stage/swatch/rapidast_user') {
     openShiftUtils.withNode(cloud: Cloud, namespace: Namespace, image: 'quay.io/redhatproductsecurity/rapidast:2.12.1', resourceRequestMemory: '1Gi', resourceLimitMemory: '4Gi') {
 
@@ -119,14 +121,15 @@ def prepareRapidastStages(String ServiceName, String PluginName, String ApiScann
                     sh "git -c http.sslVerify=false clone https://gitlab.cee.redhat.com/fcanogab/sariftojira"
                     dir("sariftojira") {
                         withCredentials([string(credentialsId: 'JIRA_TOKEN', variable: 'JIRA_TOKEN')]) {
-                            sh "export JIRA_TOKEN=${JIRA_TOKEN}"
-                            jira_component = (jiraMap.Component == null) ? '' : "-jc ${jiraMap.Component}"
-                            jira_labels =  (jiraMap.Labels == null) ? '' : "-jl ${jiraMap.Labels}"
-                            sh "mv false_positives.json.example false_positives.json"
-                            //Install dependencies python jira module via pip
-                            echo "Installing pip and Jira module"
-                            sh "python3 -m venv . && source bin/activate && pip install pyyaml jira"
-                            sh "source bin/activate && python3 sarif_to_jira.py -p ${ServiceName} -t dast -s ../${sarif_file} -jp ${jiraMap.Project} -ja ${jiraMap.Assignee} ${jira_labels} ${jira_component} -u ${TargetUrl}"
+                            withEnv(["JIRA_EMAIL=${jiraAtlassianApiAccountEmail}"]) {
+                                jira_component = (jiraMap.Component == null) ? '' : "-jc ${jiraMap.Component}"
+                                jira_labels =  (jiraMap.Labels == null) ? '' : "-jl ${jiraMap.Labels}"
+                                sh "mv false_positives.json.example false_positives.json"
+                                //Install dependencies python jira module via pip
+                                echo "Installing pip and Jira module"
+                                sh "python3 -m venv . && source bin/activate && pip install pyyaml jira"
+                                sh "source bin/activate && python3 sarif_to_jira.py -p ${ServiceName} -t dast -s ../${sarif_file} -jp ${jiraMap.Project} -ja ${jiraMap.Assignee} ${jira_labels} ${jira_component} -u ${TargetUrl}"
+                            }
                         }
                     }
                 }
