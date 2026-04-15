@@ -2,8 +2,6 @@
 
 def slackMessage
 
-def jiraAtlassianApiAccountEmail = 'insights-qe-jira-bot@redhat.com'
-
 def prepareRapidastStages(String ServiceName, String PluginName, String ApiScanner, String TargetUrl, String ApISpecUrl, String Jira, String Cloud=pipelineVars.upshiftCloud, String Namespace=pipelineVars.upshiftNameSpace, String VaultSecretPath = 'insights/secrets/qe/stage/swatch/rapidast_user') {
     openShiftUtils.withNode(cloud: Cloud, namespace: Namespace, image: 'quay.io/redhatproductsecurity/rapidast:2.12.1', resourceRequestMemory: '1Gi', resourceLimitMemory: '4Gi') {
 
@@ -121,7 +119,7 @@ def prepareRapidastStages(String ServiceName, String PluginName, String ApiScann
                     sh "git -c http.sslVerify=false clone https://gitlab.cee.redhat.com/fcanogab/sariftojira"
                     dir("sariftojira") {
                         withCredentials([string(credentialsId: 'JIRA_TOKEN', variable: 'JIRA_TOKEN')]) {
-                            withEnv(["JIRA_EMAIL=${jiraAtlassianApiAccountEmail}"]) {
+                            withEnv(['JIRA_EMAIL=insights-qe-jira-bot@redhat.com']) {
                                 jira_component = (jiraMap.Component == null) ? '' : "-jc ${jiraMap.Component}"
                                 jira_labels =  (jiraMap.Labels == null) ? '' : "-jl ${jiraMap.Labels}"
                                 sh "mv false_positives.json.example false_positives.json"
