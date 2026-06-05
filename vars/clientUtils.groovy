@@ -249,20 +249,6 @@ def setupIqePlugin(Map parameters = [:]){
             pip install git+https://github.com/RedHatInsights/insights-core.git@${iqeCoreBranch}
         """
     }
-    else if(plugin == 'iqe-satellite-plugin') {
-        sh """
-            source ${venvDir}/bin/activate
-            yum -y install docker
-            docker pull quay.io/cloudservices/selenium-standalone-chrome:3.141.59-xenon
-            docker image tag quay.io/cloudservices/selenium-standalone-chrome:3.141.59-xenon selenium/standalone-chrome:latest
-            python -m pip install docker-py
-            python -m pip install -e .[${satelliteInstance}]
-            python -m pip uninstall -y python-box
-            python -m pip install python-box==3.4.6
-        """
-            // systemctl enable docker.service
-            // systemctl start docker.service
-    }
     else if(plugin.contains('rhc')) {
         sh """
             source ${venvDir}/bin/activate
@@ -344,15 +330,6 @@ def runTests(Map parameters = [:]){
                 ls -ltr ./
                 cd iqe_rhc_client/resources/playbooks
                 nohup python -m http.server 8000 > /dev/null 2>&1 &
-            """
-        }
-        else if (plugin == 'iqe-satellite-plugin') {
-            plugin_test = 'insights_satellite'
-            sh """
-                podman stop iqe_selenium_standalone || true
-                podman rm iqe_selenium_standalone || true
-                docker run -it -d --shm-size=2g -p 4444:4444 -p 5999:5999 --name iqe_selenium_standalone quay.io/redhatqe/selenium-standalone
-                sleep 8
             """
         }
         // ibutsu configuration moved to test execution section to use environment variables

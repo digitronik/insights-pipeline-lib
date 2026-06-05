@@ -83,7 +83,7 @@ In this repository you can find 2 methods that can be useful for you:
   - **ibutsu** - OPTIONAL: whether or not to report results to ibutsu
     - Example: `true`
   - **ibutsuUrl** - OPTIONAL: the URL of ibutsu
-  - **ui** - OPTIONAL: whether or not to provision a selenium container in the test pod for running UI tests
+  - **ui** - OPTIONAL: whether or not to provision a playwright container in the test pod for running UI tests
     - Set to false by default
   - **xdistEnabled** OPTIONAL: enable pytest-xdist plugin for multiprocess parallelism
     - Set to false by default
