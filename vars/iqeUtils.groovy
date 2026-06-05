@@ -90,12 +90,9 @@ private def parseOptions(Map options) {
     // AWS region for Ibutsu if S3 upload mode is used
     options['ibutsuRegion'] = options.get('ibutsuAwsRegion', pipelineVars.defaultIbutsuAwsRegion)
 
-    // whether or not to provision a selenium container in the test pod
+    // whether or not to provision a playwright container in the test pod for UI tests
     options['ui'] = options.get('ui', false)
 
-    // [Upcoming playwright migration] whether to use playwright instead of selenium for UI tests
-    // when true, a playwright sidecar is provisioned instead of a selenium sidecar
-    options['playwright'] = options.get('playwright', false)
 
     // enable pytest-xdist plugin for multiprocess parallelism
     options['xdistEnabled'] = options.get('xdistEnabled', false)
@@ -107,7 +104,7 @@ private def parseOptions(Map options) {
     def extraEnvVars = options.get('extraEnvVars', [:])
     // if we are running UI tests, force IQE to use default browser
     if (options['ui'] && !extraEnvVars.containsKey('DYNACONF_MAIN__use_browser')){
-       extraEnvVars['DYNACONF_MAIN__use_browser'] = pipelineVars.defaultSeleniumBrowser
+       extraEnvVars['DYNACONF_MAIN__use_browser'] = pipelineVars.defaultBrowser
     }
     options['extraEnvVars'] = extraEnvVars
 
@@ -537,7 +534,7 @@ def prepareStages(Map defaultOptions, Map appConfigs) {
 
         stages[appName] = {
             if (appOptions['allocateNode']) {
-                openShiftUtils.withNodeSelector(appOptions, appOptions['ui'], appOptions.get('playwright', false)) {
+                openShiftUtils.withNodeSelector(appOptions, appOptions['ui']) {
                     createTestStages(appName, appConfig)
                 }
             }
