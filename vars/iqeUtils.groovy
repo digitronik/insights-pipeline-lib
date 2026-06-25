@@ -152,11 +152,11 @@ def runIQE(String plugin, Map appOptions) {
     /*
      * Run IQE sequential tests and parallel tests for a plugin.
      *
-     * If an IQE run fails, then fail the stage. Ignore pytest failing for having 0 tests collected
+     * If an IQE run fails, then fail the stage. Exit code 5 (no tests collected) is treated
+     * as a skip for that test bucket; if both buckets have no tests, the stage errors.
      *
      * Returns result of "SUCCESS" or "FAILURE"
      */
-    def collectionStatus
     def result
     def status
     def noParallelTests = false
@@ -240,40 +240,8 @@ def runIQE(String plugin, Map appOptions) {
         def errorMsgSequential = ""
         def markerArgs = marker ? "-m \"${marker}\"" : ""
 
-        // check that there are actually tests to run
         if (appOptions["xdistEnabled"]) {
-            // if xdist is enabled, try to collect parallel tests
             markerArgs = marker ? "-m \"parallel and (${marker})\"" : "-m \"parallel\""
-            collectionStatus = sh(
-                script: (
-                    """
-                    set +x && export \$(cat "${env.WORKSPACE}/.env" | xargs) && set -x && \
-                    iqe tests plugin ${plugin} -s -v --collect-only \
-                    ${markerArgs} \
-                    ${filterArgs} \
-                    ${requirementsArgs} \
-                    ${requirementsPriorityArgs} \
-                    ${testImportanceArgs} \
-                    ${extraArgs} \
-                    """.stripIndent()
-                ),
-                returnStatus: true
-            )
-        } else {
-            // if xdist is disabled, just act like we have no parallel tests to run
-            collectionStatus = 5
-        }
-
-        // status code 5 means no tests collected
-        if (collectionStatus == 5) {
-            noParallelTests = true
-        }
-        else if (collectionStatus > 0) {
-            result = "FAILURE"
-            errorMsgParallel = "Parallel test run collection failed with exit code ${status}"
-        }
-        // only run tests when the collection status is 0
-        else {
             status = sh(
                 script: (
                     """
@@ -297,70 +265,48 @@ def runIQE(String plugin, Map appOptions) {
                 ),
                 returnStatus: true
             )
-            if (status > 0) {
+            if (status == 5) {
+                noParallelTests = true
+            } else if (status > 0) {
                 result = "FAILURE"
                 errorMsgParallel = "Parallel test run failed with exit code ${status}."
             }
+        } else {
+            noParallelTests = true
         }
 
         // run sequential tests
         if (appOptions["xdistEnabled"]) {
-            // if xdist is enabled, modify marker
             markerArgs = marker ? "-m \"not parallel and (${marker})\"" : "-m \"not parallel\""
         }
 
-        // check that there are actually tests to run
-        collectionStatus = sh(
+        status = sh(
             script: (
                 """
                 set +x && export \$(cat "${env.WORKSPACE}/.env" | xargs) && set -x && \
-                iqe tests plugin ${plugin} -s -v --collect-only \
+                iqe tests plugin ${plugin} -s -v \
+                --junitxml=junit-${plugin}-sequential.xml \
                 ${markerArgs} \
                 ${filterArgs} \
                 ${requirementsArgs} \
                 ${requirementsPriorityArgs} \
                 ${testImportanceArgs} \
                 ${extraArgs} \
+                --log-file=iqe-${plugin}-sequential.log \
+                ${browserlog} \
+                ${reportportalArgs} \
+                ${netlog} \
+                ${forceDefaultUser} \
+                2>&1
                 """.stripIndent()
             ),
             returnStatus: true
         )
-        // status code 5 means no tests collected
-        if (collectionStatus == 5) {
+        if (status == 5) {
             noSequentialTests = true
-        }
-        else if (collectionStatus > 0) {
+        } else if (status > 0) {
             result = "FAILURE"
-            errorMsgSequential = "Sequential test run collection failed with exit code ${status}"
-        }
-        // only run tests when the collection status is 0
-        else {
-            status = sh(
-                script: (
-                    """
-                    set +x && export \$(cat "${env.WORKSPACE}/.env" | xargs) && set -x && \
-                    iqe tests plugin ${plugin} -s -v \
-                    --junitxml=junit-${plugin}-sequential.xml \
-                    ${markerArgs} \
-                    ${filterArgs} \
-                    ${requirementsArgs} \
-                    ${requirementsPriorityArgs} \
-                    ${testImportanceArgs} \
-                    ${extraArgs} \
-                    --log-file=iqe-${plugin}-sequential.log \
-                    ${browserlog} \
-                    ${reportportalArgs} \
-                    ${netlog} \
-                    ${forceDefaultUser} \
-                    2>&1
-                    """.stripIndent()
-                ),
-                returnStatus: true
-            )
-            if (status > 0) {
-                result = "FAILURE"
-                errorMsgSequential = "Sequential test run failed with exit code ${status}."
-            }
+            errorMsgSequential = "Sequential test run failed with exit code ${status}."
         }
 
         if (noParallelTests && noSequentialTests) {
