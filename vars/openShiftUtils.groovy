@@ -136,97 +136,6 @@ def withNode(Map parameters = [:], Closure body) {
 }
 
 
-def withUINode(Map parameters = [:], Closure body) {
-    /* 
-    Spins up a pod with 3 containers: jnlp, selenium, and specified 'image'
-    */
-    def cloud = parameters.get('cloud', pipelineVars.upshiftCloud)
-    def namespace = parameters.get('namespace', pipelineVars.upshiftNameSpace)
-    def slaveImage = parameters.get('slaveImage', pipelineVars.centralCIjenkinsSlaveImage)
-    def seleniumImage = parameters.get('seleniumImage', pipelineVars.seleniumImage)
-    def image = parameters.get('image', pipelineVars.iqeCoreImage)
-    def requestCpu = parameters.get('resourceRequestCpu', "500m")
-    def limitCpu = parameters.get('resourceLimitCpu', "500m")
-    def requestMemory = parameters.get('resourceRequestMemory', "100Mi")
-    def limitMemory = parameters.get('resourceLimitMemory', "1Gi")
-    def jenkinsSvcAccount = parameters.get('jenkinsSvcAccount', pipelineVars.jenkinsSvcAccount)
-    def jnlpRequestCpu = parameters.get('jnlpRequestCpu', "100m")
-    def jnlpLimitCpu = parameters.get('jnlpLimitCpu', "300m")
-    def jnlpRequestMemory = parameters.get('jnlpRequestMemory', "256Mi")
-    def jnlpLimitMemory = parameters.get('jnlpLimitMemory', "512Mi")
-    def seleniumRequestCpu = parameters.get('seleniumRequestCpu', "1000m")
-    def seleniumLimitCpu = parameters.get('seleniumLimitCpu', "1500m")
-    def seleniumRequestMemory = parameters.get('seleniumRequestMemory', "1Gi")
-    def seleniumLimitMemory = parameters.get('seleniumLimitMemory', "3Gi")
-    def envVars = parameters.get('envVars', [])
-    def extraContainers = parameters.get('extraContainers', [])
-    def volumes = parameters.get('volumes', [])
-    volumes.add(emptyDirVolume(mountPath: '/dev/shm', memory: true))
-
-    def label = "node-${UUID.randomUUID().toString()}"
-
-    setDevPiEnvVars(image, cloud, envVars)
-
-    def podParameters = [
-        label: label,
-        slaveConnectTimeout: 120,
-        serviceAccount: jenkinsSvcAccount,
-        cloud: cloud,
-        namespace: namespace,
-        containers: [
-            containerTemplate(
-                name: 'jnlp',
-                image: slaveImage,
-                args: '${computer.jnlpmac} ${computer.name}',
-                alwaysPullImage: true,
-                resourceRequestCpu: jnlpRequestCpu,
-                resourceLimitCpu: jnlpLimitCpu,
-                resourceRequestMemory: jnlpRequestMemory,
-                resourceLimitMemory: jnlpLimitMemory,
-            ),
-            containerTemplate(
-                name: 'selenium',
-                image: seleniumImage,
-                alwaysPullImage: true,
-                resourceRequestCpu: seleniumRequestCpu,
-                resourceLimitCpu: seleniumLimitCpu,
-                resourceRequestMemory: seleniumRequestMemory,
-                resourceLimitMemory: seleniumLimitMemory,
-                envVars: [
-                    envVar(key: 'SE_VNC_NO_PASSWORD', value: "1"),
-                    envVar(key: 'SE_SCREEN_HEIGHT', value: "1080"),
-                    envVar(key: 'SE_SCREEN_WIDTH', value: "1920"),
-                    envVar(key: 'SE_NODE_MAX_SESSIONS', value: "2"),
-                    envVar(key: 'SE_NODE_OVERRIDE_MAX_SESSIONS', value: "true"),
-                ],
-            ),
-            containerTemplate(
-                name: 'iqe',
-                ttyEnabled: true,
-                command: 'cat',
-                image: image,
-                alwaysPullImage: true,
-                resourceRequestCpu: requestCpu,
-                resourceLimitCpu: limitCpu,
-                resourceRequestMemory: requestMemory,
-                resourceLimitMemory: limitMemory,
-                envVars: envVars,
-            ),
-        ],
-        volumes: volumes,
-        annotations: [
-            podAnnotation(key: "job-name", value: "${env.JOB_NAME}"),
-            podAnnotation(key: "run-display-url", value: "${env.RUN_DISPLAY_URL}"),
-        ]
-    ]
-
-    // if yaml is used, the containers key will not be present
-    if (podParameters.get('containers')) podParameters['containers'].addAll(extraContainers)
-
-    runBody(podParameters, label, 'iqe', body)
-}
-
-
 def withPlaywrightNode(Map parameters = [:], Closure body) {
     /*
     Spins up a pod with 3 containers: jnlp, playwright, and specified 'image'
@@ -284,7 +193,7 @@ def withPlaywrightNode(Map parameters = [:], Closure body) {
                 resourceRequestMemory: playwrightRequestMemory,
                 resourceLimitMemory: playwrightLimitMemory,
                 envVars: [
-                    envVar(key: 'PW_BROWSER', value: "chrome"),
+                    envVar(key: 'PW_BROWSER', value: "chromium"),
                     envVar(key: 'PW_HEADLESS', value: "false"),
                 ],
             ),
@@ -315,14 +224,10 @@ def withPlaywrightNode(Map parameters = [:], Closure body) {
 }
 
 
-def withNodeSelector(Map parameters = [:], Boolean ui, Boolean playwright = false, Closure body) {
-    /* A wrapper that selects a different node type based on ui/playwright flags */
-    if (ui && playwright) {
+def withNodeSelector(Map parameters = [:], Boolean ui, Closure body) {
+    /* A wrapper that selects a different node type based on the ui flag */
+    if (ui) {
         withPlaywrightNode(parameters) {
-            body()
-        }
-    } else if (ui) {
-        withUINode(parameters) {
             body()
         }
     } else {
